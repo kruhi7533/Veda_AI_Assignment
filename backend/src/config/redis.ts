@@ -14,6 +14,12 @@ function maskUrl(url: string): string {
 }
 
 export function getRedis(): Redis {
+  if (!env.REDIS_URL) {
+    if (!client) {
+      log.warn('redis', 'REDIS_URL not set; redis cache disabled');
+    }
+    return null as unknown as Redis;
+  }
   if (!client) {
     log.step('redis', `connecting to ${maskUrl(env.REDIS_URL)} ...`);
     client = new IORedis(env.REDIS_URL, {

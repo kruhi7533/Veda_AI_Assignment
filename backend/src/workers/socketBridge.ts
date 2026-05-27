@@ -13,6 +13,10 @@ export const WORKER_EVENTS_CHANNEL = 'assignment:events';
 let _pub: IORedis | null = null;
 
 export async function initSocketClient(): Promise<void> {
+  if (!env.REDIS_URL) {
+    log.warn('worker', 'REDIS_URL not set; worker event publishing disabled');
+    return;
+  }
   _pub = new IORedis(env.REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
@@ -26,6 +30,7 @@ export async function initSocketClient(): Promise<void> {
 }
 
 export async function emitFromWorker(ev: AssignmentEvent): Promise<void> {
+  if (!env.REDIS_URL) return;
   if (!_pub) {
     _pub = new IORedis(env.REDIS_URL, {
       maxRetriesPerRequest: null,

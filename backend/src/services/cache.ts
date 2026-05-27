@@ -12,6 +12,7 @@ export async function getCachedPaper(
   hash: string
 ): Promise<GeneratedPaper | null> {
   try {
+    if (!process.env.REDIS_URL) return null;
     const r = getRedis();
     const data = await r.get(`paper:${hash}`);
     if (!data) return null;
@@ -27,6 +28,7 @@ export async function setCachedPaper(
   paper: GeneratedPaper
 ): Promise<void> {
   try {
+    if (!process.env.REDIS_URL) return;
     const r = getRedis();
     await r.setex(`paper:${hash}`, TTL_SECONDS, JSON.stringify(paper));
   } catch (e) {
@@ -36,6 +38,7 @@ export async function setCachedPaper(
 
 export async function invalidatePaper(hash: string): Promise<void> {
   try {
+    if (!process.env.REDIS_URL) return;
     await getRedis().del(`paper:${hash}`);
   } catch {
     /* swallow */

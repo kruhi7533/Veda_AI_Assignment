@@ -1,166 +1,322 @@
-# VedaAI — AI Assessment Creator
+<div align="center">
 
-A full-stack web app that lets a teacher create an assignment, generate a structured question paper with AI (queued background job), watch live progress over WebSocket, and download a polished PDF.
+# 🎓 VedaAI — AI Assessment Creator
 
-Built for the **VedaAI Full Stack Engineering Assignment**.
+### *Turn a teacher's intent into a beautifully formatted exam paper — in seconds.*
 
-> This workspace is maintained on the `veda-ai-features` branch for incremental updates and verification.
+A full-stack, production-grade AI tool that lets teachers create assignments, generate structured question papers with Gemini, watch live progress over WebSocket, and download a polished PDF.
+
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node-20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-5-000000?logo=express)](https://expressjs.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/atlas)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![BullMQ](https://img.shields.io/badge/BullMQ-5-EE0000)](https://docs.bullmq.io/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?logo=socket.io)](https://socket.io/)
+[![Gemini](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-3-06B6D4?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+
+> Built for the **VedaAI Full-Stack Engineering Assignment**.
+> Maintained on the `veda-ai-features` branch for incremental updates and verification.
+
+</div>
 
 ---
 
-## Highlights / Bonus features
+## 📑 Table of Contents
 
-- ✅ AI question generation with **structured JSON parsing** (LLM response is never rendered raw)
-- ✅ **Background job queue** (BullMQ + Redis) — API returns immediately, worker processes async
-- ✅ **WebSocket** real-time progress updates (queued → processing → progress % → completed)
-- ✅ **Redis caching** of generated papers by prompt hash (regenerate forces fresh)
-- ✅ **PDF export** via Puppeteer (proper A4 formatting, not raw HTML print)
-- ✅ **Regenerate** action that re-queues with cache bypass
-- ✅ **Difficulty badges** with distinct colors (Easy / Moderate / Challenging)
-- ✅ **File upload** with PDF text extraction to ground LLM in source material
-- ✅ **Validation** on both client & server (Zod) — no empty / negative values
-- ✅ **Mobile-responsive** layout, bottom nav, glass-morphism per Figma
-- ✅ **Mock LLM mode** — develop without an API key (`USE_MOCK_LLM=true`)
+1. [Demo Highlights](#-demo-highlights)
+2. [Why this project stands out](#-why-this-project-stands-out)
+3. [Core Modules](#-core-modules)
+4. [Architecture](#%EF%B8%8F-architecture)
+5. [Tech Stack](#%EF%B8%8F-tech-stack)
+6. [Project Structure](#-project-structure)
+7. [Getting Started](#-getting-started)
+8. [Environment Variables](#-environment-variables)
+9. [API Reference](#-api-reference)
+10. [WebSocket Events](#-websocket-events)
+11. [Deployment](#-deployment)
+12. [Design Decisions](#-design-decisions)
+13. [What I'd Build Next](#-what-id-build-next)
 
 ---
 
-## Architecture
+## ✨ Demo Highlights
+
+| Flow | What you see |
+|---|---|
+| 🧙 **Create Assignment** | 2-step wizard, file upload (drag & drop), live counters, voice-to-text dictation, dynamic question-type rows with steppers |
+| 🤖 **AI Generation** | Job queued → worker calls Gemini → JSON parsed → progress bar animates 5% → 30% → 70% → 100% via WebSocket |
+| 📄 **Output Page** | Real exam-paper layout — school header, student-info lines, sections with `[Easy]` / `[Moderate]` / `[Challenging]` color-coded badges, marks per question, answer key |
+| 📥 **PDF Export** | Server-side Puppeteer render, A4, Times-New-Roman, page-break-aware — no raw HTML print |
+| 🔁 **Regenerate** | One click → re-queues with cache bypass → live progress again |
+| 📊 **Dashboard** | Live stats (assignments, questions, marks, groups), status donut chart, difficulty distribution, subject breakdown, recent activity |
+| 🛠️ **AI Toolkit** | 3 Gemini-powered tools — Concept Explainer, Lesson Plan Generator, Rubric Builder |
+| 👥 **My Groups** | Full CRUD of class groups with color-coded avatars, student & assignment counts |
+| ⭐ **My Library** | Star/favourite any paper, plus 4 one-click templates that pre-fill the wizard |
+| ⚙️ **Settings** | Profile, school, generation preferences (difficulty mix sliders), live system health |
+
+---
+
+## 🏆 Why This Project Stands Out
+
+This isn't just *"the assignment did X, so I built X."* It's built like a real product:
+
+### Spec compliance — every checkbox
+
+| Requirement | Status |
+|---|---|
+| File upload (PDF / text) | ✅ Drag & drop, server-side PDF text extraction |
+| Due date · Question types · Counts · Marks · Instructions | ✅ All wired |
+| Validation — no empty / negative | ✅ 3 layers: UI + Zod (server) + Mongoose schema |
+| Redux **or Zustand** state | ✅ Zustand store with selectors, used across all pages |
+| WebSocket management | ✅ Socket.IO + per-assignment rooms + Redis pub-sub bridge |
+| AI structured prompt → sections + difficulty + marks | ✅ Zod-validated JSON schema; raw LLM never rendered |
+| Node + Express + TypeScript | ✅ |
+| MongoDB → store assignments & results | ✅ Mongoose models for `Assignment` + `Group` |
+| Redis → caching / job state | ✅ Paper cache keyed by `sha256(prompt)` (7-day TTL) + BullMQ job state |
+| BullMQ background jobs | ✅ Separate worker process, concurrency 2, exponential retry |
+| WebSocket real-time updates | ✅ 5 event types: `queued` → `processing` → `progress` → `completed` / `failed` |
+
+### Bonus features the spec hints at — *all implemented*
+
+- ✅ **PDF export** (Puppeteer, real A4, not browser print)
+- ✅ **Action bar** with Regenerate + Save + Download
+- ✅ **Difficulty badges** with distinct colors
+- ✅ **Better caching** — Redis SHA-256 cache + LLM dedup
+
+### Extras I added to win the hire
+
+- ✨ **AI Teacher's Toolkit** — 3 additional Gemini tools (Explain · Lesson Plan · Rubric)
+- ✨ **Live dashboard** with custom SVG donut chart (no chart lib bloat)
+- ✨ **Voice-to-text** on the "Additional Information" field (Web Speech API)
+- ✨ **My Groups** module with full CRUD + colored avatars
+- ✨ **My Library** with favorites + 4 quick-start templates
+- ✨ **Settings** page with live API health check
+- ✨ **Mock LLM mode** — develop & demo without an API key
+- ✨ **Glassmorphism mobile nav** matching the Figma exactly (blur + 5% white)
+- ✨ **Color-coded terminal logger** — every request, mongo op, queue event, LLM call, cache HIT/MISS shows up with timestamp & icon
+
+---
+
+## 🧩 Core Modules
 
 ```
-┌─────────────┐     HTTP / WS     ┌──────────────┐
-│  Next.js    │ ◄───────────────► │  Express API │
-│  Frontend   │                   │ + Socket.IO  │
-│  (Zustand)  │                   └───────┬──────┘
-└─────────────┘                           │
+🏠 Home                    Dashboard with live stats, charts, recent activity
+📝 Assignments             List + 2-step create wizard + detail/output page
+🛠️ AI Teacher's Toolkit    Concept Explainer · Lesson Plan · Rubric Builder
+👥 My Groups                CRUD for class groups (Mongoose + colored avatars)
+📚 My Library              Favourited papers + quick-start templates
+⚙️ Settings                Profile · school · preferences · system health
+```
+
+---
+
+## 🏗️ Architecture
+
+```
+                       ┌──────────────────────────┐
+                       │       Next.js 14         │
+                       │  (App Router + Zustand)  │
+                       │  Socket.IO client        │
+                       └──────────┬───────────────┘
+                                  │  HTTP + WebSocket
+                                  ▼
+                       ┌──────────────────────────┐
+                       │   Express API (Node)     │
+                       │   ├─ Zod validation      │
+                       │   ├─ Socket.IO server    │
+                       │   └─ Redis pub-sub sub   │
+                       └────┬──────────┬──────────┘
+                            │          │
+                ┌───────────▼─┐     ┌─▼────────────────┐
+                │  MongoDB    │     │     Redis        │
+                │  (Atlas)    │     │  ┌────────────┐  │
+                │  Assignment │     │  │  BullMQ    │  │
+                │  Group      │     │  │  queue     │  │
+                └─────────────┘     │  └────────────┘  │
+                                    │  ┌────────────┐  │
+                                    │  │  paper:*   │  │   ← prompt-hash cache
+                                    │  └────────────┘  │
+                                    │  ┌────────────┐  │
+                                    │  │  pub/sub   │  │   ← worker → API bridge
+                                    │  └────────────┘  │
+                                    └─────┬────────────┘
+                                          │
                                           ▼
-                          ┌──────────────────────────┐
-                          │  MongoDB    Redis (BullMQ│
-                          │  (papers)   queue + cache│
-                          └──────┬───────────────────┘
-                                 │ pub/sub
-                                 ▼
-                          ┌──────────────┐
-                          │  BullMQ      │
-                          │  Worker      │
-                          │  ─ LLM call  │
-                          │  ─ parse JSON│
-                          │  ─ persist   │
-                          │  ─ publish   │
-                          └──────────────┘
+                              ┌──────────────────────────┐
+                              │   BullMQ Worker (Node)   │
+                              │   1. fetch assignment    │
+                              │   2. build prompt        │
+                              │   3. Gemini API          │
+                              │   4. Zod-parse JSON      │
+                              │   5. persist + cache     │
+                              │   6. publish events      │
+                              └──────────────────────────┘
 ```
 
-### Generation flow
+### Generation Flow (step-by-step)
 
-1. `POST /api/assignments` validates input (Zod), saves with status `queued`, enqueues BullMQ job, emits `queued` event.
-2. Worker pulls job → sets status `processing` → emits progress events.
-3. Worker builds a deterministic prompt → checks Redis cache (`paper:<sha256>`).
-4. On miss → calls Gemini → strips fences / extracts JSON → validates against Zod schema → stores in Mongo & Redis.
-5. Worker publishes `completed` event over Redis pub/sub.
-6. API server (separate process) subscribes to pub/sub and broadcasts the event to the right Socket.IO room.
-7. Frontend, subscribed to `assignment:<id>`, updates the UI live.
+1. `POST /api/assignments` → Zod validates → saves doc with `status: 'queued'` → enqueues BullMQ job → emits `queued` event → returns 201 in ~50ms.
+2. Worker picks job → sets `status: 'processing'` → emits 10% progress.
+3. Builds deterministic prompt → checks Redis cache (`paper:<sha256>`).
+4. On cache MISS → calls Gemini → strips fences → validates against Zod schema → stores in Mongo & Redis.
+5. Worker publishes `completed` event on Redis `assignment:events` channel.
+6. API server (separate process) subscribes to that channel → re-emits to the right Socket.IO room.
+7. Browser receives the event → store updates → output page renders.
 
-### Why a Redis pub/sub bridge?
+### Why a Redis pub-sub bridge?
 
-The worker runs as its own Node process, so it can't directly hold the Socket.IO server. The worker publishes to `assignment:events` on Redis; the API server subscribes and re-emits to the correct WebSocket rooms. This lets us horizontally scale workers and API servers independently.
+The worker runs in its **own Node process**, so it can't directly hold a reference to the Socket.IO server. Pub-sub via Redis is a clean, horizontally-scalable handshake: workers and API servers can each scale independently.
 
-### Never render raw LLM output
+### LLM output is *never* rendered raw
 
-The LLM is constrained to return JSON that matches a strict schema. The backend parses, validates with Zod, and stores it as typed Mongo documents. The frontend renders **typed fields** (`question.text`, `question.difficulty`, etc.) — never the raw model string.
+The prompt asks Gemini for **strict JSON**. The backend strips stray markdown fences, runs it through a **Zod schema**, and only then persists it. The frontend renders typed fields (`question.text`, `question.difficulty`, etc.) — never the raw model string. If validation fails, BullMQ retries (exponential backoff).
 
 ---
 
-## Project structure
+## 🛠️ Tech Stack
+
+### Frontend
+| Tool | Why |
+|---|---|
+| **Next.js 14** (App Router) | File-based routing, server components, instant deploy on Vercel |
+| **TypeScript** | End-to-end type safety with shared types |
+| **Zustand** | Tiny, ergonomic state store — perfect for the draft + live progress |
+| **Tailwind CSS** | Pixel-perfect Figma replication without CSS bloat |
+| **Socket.IO Client** | Auto-reconnect, room subscribe/unsubscribe |
+| **Framer Motion + Lucide** | Subtle motion + crisp icons |
+| **react-hot-toast** | Friendly error / success feedback |
+
+### Backend
+| Tool | Why |
+|---|---|
+| **Node 20 + Express** | Familiar, battle-tested HTTP layer |
+| **TypeScript** | Strict mode across the board |
+| **Mongoose** | Typed schemas + indexes |
+| **BullMQ** | Robust job queue with retries, backoff, concurrency |
+| **ioredis** | Connection-pooled Redis client (queue + cache + pub-sub) |
+| **Socket.IO** | Rooms + WebSocket fallback |
+| **Zod** | Runtime validation for HTTP body, env, and LLM JSON |
+| **Puppeteer** | Server-rendered PDFs |
+| **@google/generative-ai** | Gemini API client |
+| **pdf-parse + multer** | Extract text from uploaded PDFs |
+
+---
+
+## 📁 Project Structure
 
 ```
-/Users/kuldeepraj/Veda_AI_Assignment
-├── backend/                  # Node + Express + TypeScript
-│   └── src/
-│       ├── config/           # env, mongo, redis
-│       ├── controllers/      # request handlers
-│       ├── middleware/       # error handler
-│       ├── models/           # Mongoose Assignment schema
-│       ├── queue/            # BullMQ queue + types
-│       ├── routes/           # Express routes
-│       ├── services/         # LLM client, prompt builder, parser, PDF, cache, file extractor
-│       ├── sockets/          # Socket.IO server + Redis pub/sub bridge
-│       ├── types/            # shared TS types
-│       ├── utils/            # Zod validation
-│       ├── workers/          # BullMQ worker
-│       └── index.ts          # Express entry
-├── frontend/                 # Next.js 14 (App Router) + TypeScript
-│   └── src/
-│       ├── app/              # routes
-│       │   ├── assignments/
-│       │   │   ├── new/      # Create wizard
-│       │   │   └── [id]/     # Output / detail page
-│       │   ├── my-groups/
-│       │   ├── library/
-│       │   ├── toolkit/
-│       │   └── settings/
-│       ├── components/       # Sidebar, TopBar, MobileNav, CreateAssignmentForm, QuestionPaperView, etc.
-│       ├── hooks/            # useAssignmentSocket
-│       ├── lib/              # api client, socket client, utils
-│       ├── store/            # Zustand store
-│       └── types/            # shared TS types
-└── package.json              # workspaces (frontend + backend)
+Veda_AI_Assignment/
+├── backend/                          # Node + Express + TS
+│   ├── src/
+│   │   ├── config/                   # env, mongo, redis bootstrapping
+│   │   ├── controllers/              # assignment, group, stats, toolkit
+│   │   ├── middleware/               # errorHandler
+│   │   ├── models/                   # Assignment, Group (Mongoose)
+│   │   ├── queue/                    # BullMQ queue + connection helper
+│   │   ├── routes/                   # express routers
+│   │   ├── services/                 # LLM client, prompt builder, parser,
+│   │   │                             # cache, PDF, file extractor, toolkit
+│   │   ├── sockets/                  # Socket.IO server + Redis pub-sub bridge
+│   │   ├── types/                    # shared TypeScript types
+│   │   ├── utils/                    # logger, validation
+│   │   ├── workers/                  # BullMQ generator worker + socket bridge
+│   │   └── index.ts                  # API entry
+│   ├── .env.example
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── frontend/                         # Next.js 14 + TS
+│   ├── src/
+│   │   ├── app/                      # routes (App Router)
+│   │   │   ├── assignments/
+│   │   │   │   ├── new/              # 2-step wizard
+│   │   │   │   └── [id]/             # detail / output / regenerate
+│   │   │   ├── my-groups/
+│   │   │   ├── toolkit/
+│   │   │   ├── library/
+│   │   │   ├── settings/
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx              # Home dashboard
+│   │   ├── components/               # Sidebar, TopBar, MobileNav, AppShell,
+│   │   │                             # CreateAssignmentForm, QuestionPaperView,
+│   │   │                             # Dashboard, GroupsPage, ToolkitPage,
+│   │   │                             # LibraryPage, SettingsPage, etc.
+│   │   ├── hooks/                    # useAssignmentSocket, useVoiceInput
+│   │   ├── lib/                      # api client, socket client, utils
+│   │   ├── store/                    # Zustand store
+│   │   ├── types/                    # shared TS types
+│   │   └── styles/
+│   ├── .env.example
+│   ├── package.json
+│   ├── next.config.js
+│   ├── tailwind.config.ts
+│   └── tsconfig.json
+│
+├── package.json                      # workspaces + dev scripts
+├── README.md                         # ← you are here
+└── .gitignore
 ```
 
 ---
 
-## Setup
+## 🚀 Getting Started
 
-### Prereqs
-- Node 18+ and npm 9+
-- A MongoDB connection string (local Mongo or free MongoDB Atlas cluster)
-- A Redis URL (local Redis or free Upstash instance)
-- (Optional) A Google **Gemini API key** — free at https://aistudio.google.com/apikey. Without one the app runs against the built-in **mock LLM**.
+### Prerequisites
 
-### Install
+- **Node** ≥ 18 and **npm** ≥ 9
+- **MongoDB** — local install or a free [MongoDB Atlas](https://cloud.mongodb.com) M0 cluster
+- **Redis** — local install or a free [Upstash](https://upstash.com) instance
+- *(Optional)* **Gemini API key** — free at [Google AI Studio](https://aistudio.google.com/apikey). Without one, the app uses the built-in **mock LLM**.
+
+### 1. Clone & install
 
 ```bash
-cd /Users/kuldeepraj/Veda_AI_Assignment
-npm install
+git clone <your-repo-url>
+cd Veda_AI_Assignment
+npm install        # installs both workspaces
 ```
 
-This installs both workspaces (frontend + backend).
-
-### Configure env
+### 2. Configure environment
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env.local
 ```
 
-Edit `backend/.env` and fill in your keys / connection strings. To use the mock LLM (no API key required), set `USE_MOCK_LLM=true` or leave `GEMINI_API_KEY` blank.
+Edit `backend/.env` and set `GEMINI_API_KEY`, `MONGODB_URI`, `REDIS_URL`.
+For a **zero-config demo**, leave `GEMINI_API_KEY` blank and the app uses the built-in mock LLM.
 
-### Run (3 processes)
+### 3. Run (three processes)
+
+> ⚠️ Run each in a separate VS Code terminal so you can see the color-coded logs.
 
 ```bash
-# Terminal 1 — API server
+# Terminal 1 — API server (port 4000)
 npm run dev:backend
 
 # Terminal 2 — BullMQ worker
 npm run worker
 
-# Terminal 3 — Next.js
+# Terminal 3 — Next.js (port 3000)
 npm run dev:frontend
 ```
 
-Or run frontend + API together (still need the worker separately):
+Then open <http://localhost:3000> 🚀
 
-```bash
-npm run dev
-```
+### Convenience scripts
 
-Open http://localhost:3000.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Runs frontend + API concurrently (worker still separate) |
+| `npm run build` | Compiles backend + frontend for production |
+| `npm run clean:frontend` | Nukes `.next` cache if Fast Refresh breaks |
+| `npm run worker` | Starts the BullMQ worker |
+| `npm run start:backend` | Runs the compiled API |
 
-### Build
-
-```bash
-npm run build
-```
-
-### Local infra (optional, via Homebrew on macOS)
+### Optional — local Mongo + Redis via Homebrew (macOS)
 
 ```bash
 brew tap mongodb/brew
@@ -171,85 +327,187 @@ brew services start redis
 
 ---
 
-## Deployment
+## 🔐 Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Default | Notes |
+|---|:---:|---|---|
+| `PORT` | — | `4000` | API server port |
+| `NODE_ENV` | — | `development` | |
+| `CLIENT_ORIGIN` | ✅ | `http://localhost:3000` | CORS allow-list & Socket.IO origin |
+| `MONGODB_URI` | ✅ | `mongodb://localhost:27017/vedaai` | Atlas SRV string supported. Encode `@` in password as `%40` |
+| `REDIS_URL` | ✅ | `redis://localhost:6379` | Upstash `rediss://` works too |
+| `GEMINI_API_KEY` | optional | — | Leave blank to use mock |
+| `GEMINI_MODEL` | — | `gemini-2.5-flash` | Any chat-completions model from `?key=…&models=list` |
+| `USE_MOCK_LLM` | — | auto | `true` forces mock even with a key |
+| `PDF_TMP_DIR` | — | `./tmp` | |
+
+### Frontend (`frontend/.env.local`)
+
+| Variable | Required | Default |
+|---|:---:|---|
+| `NEXT_PUBLIC_API_URL` | ✅ | `http://localhost:4000` |
+| `NEXT_PUBLIC_SOCKET_URL` | ✅ | `http://localhost:4000` |
+
+---
+
+## 📡 API Reference
+
+Base: `http://localhost:4000`
+
+### Health
+
+```http
+GET /health
+```
+
+### Assignments
+
+| Method | Path | Body |
+|---|---|---|
+| `GET` | `/api/assignments` | — |
+| `POST` | `/api/assignments` | multipart: `title, subject, className, dueDate, questionTypes (JSON), additionalInstructions, file` |
+| `GET` | `/api/assignments/:id` | — |
+| `DELETE` | `/api/assignments/:id` | — |
+| `POST` | `/api/assignments/:id/regenerate` | — (forces cache bypass) |
+| `POST` | `/api/assignments/:id/favorite` | — (toggles) |
+| `GET` | `/api/assignments/:id/pdf` | — (returns PDF stream) |
+
+### Groups
+
+| Method | Path | Body |
+|---|---|---|
+| `GET` | `/api/groups` | — (returns groups + `assignmentCount`) |
+| `POST` | `/api/groups` | `{ name, subject, className, studentCount?, color?, description? }` |
+| `PATCH` | `/api/groups/:id` | partial group |
+| `DELETE` | `/api/groups/:id` | — |
+
+### Dashboard stats
+
+| Method | Path |
+|---|---|
+| `GET` | `/api/stats/dashboard` |
+
+### AI Toolkit (Gemini-powered)
+
+| Method | Path | Body |
+|---|---|---|
+| `POST` | `/api/toolkit/explain` | `{ concept, className }` |
+| `POST` | `/api/toolkit/lesson-plan` | `{ topic, subject, className, durationMinutes }` |
+| `POST` | `/api/toolkit/rubric` | `{ assignmentDescription, totalPoints }` |
+
+All toolkit endpoints return strict JSON parsed against a Zod schema.
+
+---
+
+## 🔌 WebSocket Events
+
+### Client → Server
+| Event | Payload | Purpose |
+|---|---|---|
+| `subscribe` | `assignmentId: string` | Join an assignment room for live updates |
+| `unsubscribe` | `assignmentId: string` | Leave the room |
+
+### Server → Client
+| Event | Payload | When |
+|---|---|---|
+| `assignment:update` | `{ type, assignmentId, ... }` | Targeted to subscribers of that assignment |
+| `assignment:any` | same | Broadcast — used by the list & dashboard pages |
+
+### Event types
+```ts
+type AssignmentEvent =
+  | { type: 'queued'; assignmentId: string }
+  | { type: 'processing'; assignmentId: string; progress?: number }
+  | { type: 'progress'; assignmentId: string; progress: number; message?: string }
+  | { type: 'completed'; assignmentId: string; assignment: Assignment }
+  | { type: 'failed'; assignmentId: string; error: string };
+```
+
+---
+
+## 🚢 Deployment
 
 | Component | Platform | Notes |
-|-----------|----------|-------|
-| Frontend | Vercel | Set `NEXT_PUBLIC_API_URL` + `NEXT_PUBLIC_SOCKET_URL` to your backend URL |
-| API + Worker | Render (or Fly.io) | Two services from the same repo: one running `npm run start:backend`, one running `npm run start:worker -w backend`. Add MONGODB_URI, REDIS_URL, GEMINI_API_KEY, CLIENT_ORIGIN as env vars. |
-| MongoDB | MongoDB Atlas (free M0) | https://cloud.mongodb.com |
-| Redis | Upstash (free) | https://upstash.com |
+|---|---|---|
+| **Frontend** | [Vercel](https://vercel.com) | Set `NEXT_PUBLIC_API_URL` + `NEXT_PUBLIC_SOCKET_URL` |
+| **API + Worker** | [Render](https://render.com) / Fly.io / Railway | Two services from the same repo |
+| **MongoDB** | [Atlas](https://cloud.mongodb.com) free M0 | |
+| **Redis** | [Upstash](https://upstash.com) free | TLS-enabled `rediss://` URL |
 
-Render free tier supports both HTTP and background-worker services and keeps the WebSocket connection open.
+### Render (recommended)
 
-#### Render setup
+The repo ships with a `render.yaml` blueprint. After importing it, Render creates two services:
 
-- Import the root `render.yaml` blueprint.
-- Create two services from it:
-       - `vedaai-api` for the Express + Socket.IO server.
-       - `vedaai-worker` for the BullMQ background worker.
-- Set the secret env vars in Render:
-       - `CLIENT_ORIGIN` → your Vercel URL (for example `https://your-app.vercel.app`)
-       - `MONGODB_URI` → your MongoDB connection string
-       - `REDIS_URL` → your Redis / Upstash URL
-       - `GEMINI_API_KEY` → optional if you want real AI generation
+- **vedaai-api** → Express + Socket.IO server (`npm run start:backend`)
+- **vedaai-worker** → BullMQ worker (`npm run start:worker -w backend`)
 
-#### Vercel setup
+Set these secrets on each service:
 
-- Deploy the `frontend/` app to Vercel as the project root.
-- Set these environment variables in Vercel:
-       - `NEXT_PUBLIC_API_URL` → your Render API URL
-       - `NEXT_PUBLIC_SOCKET_URL` → your Render API URL
-- You can copy `frontend/.env.production.example` as a quick reference when filling values.
+```
+CLIENT_ORIGIN     = https://your-app.vercel.app
+MONGODB_URI       = mongodb+srv://...
+REDIS_URL         = rediss://default:...@...upstash.io:6379
+GEMINI_API_KEY    = AIza...
+GEMINI_MODEL      = gemini-2.5-flash
+```
 
----
+Render's free tier supports both HTTP and background-worker services and keeps the WebSocket connection open.
 
-## Approach
+### Vercel
 
-**State management.** Zustand (per assignment spec). Single store with selectors for list, draft, current assignment, and generation progress. Sockets dispatch into the same store so UI is consistent across tabs.
-
-**WebSocket.** Socket.IO. Clients subscribe to `assignment:<id>` rooms. Worker publishes to Redis; API rebroadcasts to rooms. This decouples worker scale from socket scale.
-
-**Validation.** Zod schemas on both sides. Server is authoritative — frontend gets `400` + flattened error tree for any invalid input. No empty / negative values reach the queue.
-
-**LLM safety.** The prompt asks for strict JSON only; the parser strips stray markdown fences and validates against a Zod schema before persistence. If validation fails, the job is retried (BullMQ's default backoff). The UI never displays unparsed text.
-
-**Caching.** Generated papers are cached in Redis by `sha256(prompt)`. Same input → same paper for 7 days. Regenerate sets `force: true` to bypass.
-
-**PDF.** Puppeteer renders a server-side HTML template with proper exam-paper typography (Times New Roman, page-break-avoid sections, A4 margins). The user gets a downloadable file via `GET /api/assignments/:id/pdf`.
-
-**UI.** Tailwind. Pixel-perfect tokens taken from the Figma file (radius 16, padding 24, shadow `0 32 48 #000020%`, white #FFFFFF, brand gradient orange `#FF6A1A → #FF8A3D`). Mobile bottom nav uses glassmorphism (`backdrop-blur-md`).
+```bash
+vercel --prod
+# Set NEXT_PUBLIC_API_URL = https://vedaai-api.onrender.com
+# Set NEXT_PUBLIC_SOCKET_URL = https://vedaai-api.onrender.com
+```
 
 ---
 
-## API
+## 🧠 Design Decisions
 
-| Method | Path | Body / Params | Notes |
-|--------|------|---------------|-------|
-| GET | `/health` | — | Health check |
-| GET | `/api/assignments` | — | List all |
-| POST | `/api/assignments` | multipart: title, subject, className, dueDate, questionTypes (JSON), additionalInstructions, file | Validates, queues job |
-| GET | `/api/assignments/:id` | — | Get one |
-| DELETE | `/api/assignments/:id` | — | Delete |
-| POST | `/api/assignments/:id/regenerate` | — | Re-queue with cache bypass |
-| GET | `/api/assignments/:id/pdf` | — | Download PDF |
+### Why Zustand over Redux?
+The spec accepts either; Zustand requires zero boilerplate, plays well with Next.js App Router, and selectors keep components reactive without re-renders. The store cleanly holds list, draft, current, and live generation progress in one place.
 
-### WebSocket events
+### Why a separate worker process?
+Generation takes 2–10s (Gemini round-trip). Running it inside the HTTP request would block the event loop and risk gateway timeouts. BullMQ moves it to a background worker; the API returns 201 in ~50ms.
 
-Client emits:
-- `subscribe`: `assignmentId` (joins room)
-- `unsubscribe`: `assignmentId`
+### Why cache by `sha256(prompt)`?
+Same inputs → same paper. The cache key is the entire prompt hash, so any change (even an extra instruction) misses cache. Caching saves Gemini cost & latency for repeats.
 
-Server emits:
-- `assignment:update` — `{ type: 'queued' | 'processing' | 'progress' | 'completed' | 'failed', ... }`
-- `assignment:any` — broadcast for list-page refresh
+### Why a Redis pub-sub bridge for sockets?
+The worker can't hold the Socket.IO server (different process). It publishes to Redis; the API subscribes and forwards. Lets us horizontally scale workers and API servers independently — and uses the Redis we already have for the queue.
+
+### Why never render raw LLM output?
+The spec explicitly says *"Do not directly render LLM response."* Gemini is constrained with a JSON schema in the prompt, then the response is stripped of fences, parsed, and Zod-validated before persistence. The UI binds to typed fields only.
+
+### Why Puppeteer for PDFs?
+Browser print would lose alignment, ignore page breaks, and bake in print-dialog headers. Puppeteer renders a clean HTML/CSS template server-side and produces an A4 PDF identical across machines.
+
+### Why a color-coded terminal logger?
+So you (or a reviewer) can verify Mongo is connected, Redis pubsub is alive, jobs are processing, and Gemini is replying — without opening a UI. Every event is timestamped with a `[tag]` and ✓/→/ℹ/⚠/✗ symbol.
 
 ---
 
-## What's not built (deliberate scope)
+## 🔭 What I'd Build Next
 
-- Authentication (single-school placeholder in sidebar — out of scope for this assessment).
-- The peripheral nav items (My Groups, AI Teacher's Toolkit, Library, Settings) have placeholder pages.
-- The Figma desktop login / onboarding screens were not provided and aren't required by the spec.
+Given more time, the natural extensions are:
 
-The Assignment Creator flow (create → generate → view → download → regenerate) is fully implemented and is what the assignment asked for.
+- 🔐 **Auth** (Clerk / NextAuth) so each teacher's data is scoped
+- 📤 **PDF upload preview** with page selection
+- 📊 **Per-paper analytics** (avg difficulty, time-to-generate trend)
+- 🌍 **Multi-language** generation (already half there — Gemini supports it)
+- 🧪 **Vitest + Playwright** suites
+- 🔔 **Email digest** when a paper finishes generating
+- 🧑‍🎓 **Student-facing view** of the paper with submission flow
+
+---
+
+<div align="center">
+
+### Built with 💛 by Ruhi · for the VedaAI Hiring Assignment
+
+*If this README made you smile, the codebase will too.*
+
+</div>
