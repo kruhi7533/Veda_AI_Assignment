@@ -6,6 +6,7 @@ import { emitAssignmentEvent } from '../sockets';
 import { extractText } from '../services/fileExtractor';
 import { paperToPdf } from '../services/pdf';
 import { log } from '../utils/logger';
+import { generatePaperForAssignment } from '../services/generation';
 
 function parseQuestionTypes(raw: unknown): unknown {
   if (typeof raw === 'string') {
@@ -75,20 +76,36 @@ export async function createAssignment(
     status: 'queued',
   });
 
-  const queue = getGenerationQueue();
-  const job = await queue.add('generate', { assignmentId: a._id.toString() });
-  a.jobId = job.id;
-  await a.save();
-
-  log.ok(
-    'queue',
-    `assignment "${a.title}" → enqueued (id=${a._id}, jobId=${job.id}, totalQ=${totalQuestions}, totalM=${totalMarks})`
-  );
-
   emitAssignmentEvent({
     type: 'queued',
     assignmentId: a._id.toString(),
   });
+
+  try {
+    const queue = getGenerationQueue();
+    const job = await queue.add('generate', { assignmentId: a._id.toString() });
+    a.jobId = job.id;
+    await a.save();
+
+    log.ok(
+      'queue',
+      `assignment "${a.title}" → enqueued (id=${a._id}, jobId=${job.id}, totalQ=${totalQuestions}, totalM=${totalMarks})`
+    );
+  } catch (e) {
+    log.warn(
+      'queue',
+      `queue unavailable; generating inline for assignment "${a.title}"`
+    );
+    const { paper } = await generatePaperForAssignment(a);
+    a.generatedPaper = paper;
+    a.status = 'completed';
+    await a.save();
+    emitAssignmentEvent({
+      type: 'completed',
+      assignmentId: a._id.toString(),
+      assignment: a.toObject() as any,
+    });
+  }
 
   res.status(201).json(a);
 }
@@ -133,20 +150,33 @@ export async function regenerateAssignment(
   a.generatedPaper = undefined;
   await a.save();
 
-  const queue = getGenerationQueue();
-  const job = await queue.add('generate', {
-    assignmentId: a._id.toString(),
-    force: true,
-  });
-  a.jobId = job.id;
-  await a.save();
-
-  log.ok(
-    'queue',
-    `assignment "${a.title}" → regenerate enqueued (id=${a._id}, jobId=${job.id}, cache bypass)`
-  );
-
   emitAssignmentEvent({ type: 'queued', assignmentId: a._id.toString() });
+
+  try {
+    const queue = getGenerationQueue();
+    const job = await queue.add('generate', {
+      assignmentId: a._id.toString(),
+      force: true,
+    });
+    a.jobId = job.id;
+    await a.save();
+
+    log.ok(
+      'queue',
+      `assignment "${a.title}" → regenerate enqueued (id=${a._id}, jobId=${job.id}, cache bypass)`
+    );
+  } catch {
+    log.warn('queue', `queue unavailable; regenerating inline for "${a.title}"`);
+    const { paper } = await generatePaperForAssignment(a, true);
+    a.generatedPaper = paper;
+    a.status = 'completed';
+    await a.save();
+    emitAssignmentEvent({
+      type: 'completed',
+      assignmentId: a._id.toString(),
+      assignment: a.toObject() as any,
+    });
+  }
 
   res.json(a);
 }
