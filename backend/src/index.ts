@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { connectMongo } from './config/db';
 import { initSocket } from './sockets';
 import { startWorkerEventSubscriber } from './sockets/redisBridge';
+import { startWorker } from './workers/embeddedWorker';
 import assignmentRoutes from './routes/assignment.routes';
 import groupRoutes from './routes/group.routes';
 import toolkitRoutes from './routes/toolkit.routes';
@@ -88,6 +89,16 @@ async function main(): Promise<void> {
   startWorkerEventSubscriber().catch((e) => {
     log.warn('ws', `worker event subscriber unavailable: ${(e as Error).message}`);
   });
+
+  // Optional: embed the BullMQ worker inside the API process. Used for
+  // single-process deployments (e.g. Render's free tier, which has no free
+  // background worker plan). Enable with RUN_WORKER_IN_API=true.
+  if (env.RUN_WORKER_IN_API) {
+    startWorker({ concurrency: 2, embedded: true }).catch((e) => {
+      log.err('worker', `embedded worker failed to start: ${(e as Error).message}`);
+    });
+    log.info('api', 'RUN_WORKER_IN_API=true → BullMQ worker will run in this process');
+  }
 }
 
 main().catch((e) => {
