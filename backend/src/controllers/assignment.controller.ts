@@ -1,11 +1,23 @@
 import { Request, Response } from 'express';
 import { Assignment } from '../models/Assignment';
 import { createAssignmentSchema } from '../utils/validation';
-import { getGenerationQueue } from '../queue';
+import { getGenerationQueue, isRedisConfigured } from '../queue';
 import { emitAssignmentEvent } from '../sockets';
 import { extractText } from '../services/fileExtractor';
 import { paperToPdf } from '../services/pdf';
 import { log } from '../utils/logger';
+
+function requireRedis(res: Response): boolean {
+  if (!isRedisConfigured()) {
+    res.status(503).json({
+      error:
+        'Backend is not fully configured: REDIS_URL is missing on the server. ' +
+        'BullMQ + WebSocket progress need Redis. Set REDIS_URL in your env (e.g. an Upstash URL) and redeploy.',
+    });
+    return false;
+  }
+  return true;
+}
 import { generatePaperForAssignment } from '../services/generation';
 
 function parseQuestionTypes(raw: unknown): unknown {
@@ -35,6 +47,8 @@ export async function createAssignment(
       marksPerQuestion: Number(q.marksPerQuestion),
     }));
   }
+
+  if (!requireRedis(res)) return;
 
   const parsed = createAssignmentSchema.safeParse(body);
   if (!parsed.success) {
@@ -140,6 +154,7 @@ export async function regenerateAssignment(
   req: Request,
   res: Response
 ): Promise<void> {
+  if (!requireRedis(res)) return;
   const a = await Assignment.findById(req.params.id);
   if (!a) {
     res.status(404).json({ error: 'Not found' });
