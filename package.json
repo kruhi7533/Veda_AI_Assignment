@@ -17,6 +17,9 @@
     "clean:frontend": "rm -rf frontend/.next",
     "clean": "rm -rf frontend/.next backend/dist"
   },
+  "engines": {
+    "node": ">=20.0.0 <23.0.0"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2"
   }
