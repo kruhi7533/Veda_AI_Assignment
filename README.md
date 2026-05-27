@@ -488,19 +488,6 @@ Browser print would lose alignment, ignore page breaks, and bake in print-dialog
 ### Why a color-coded terminal logger?
 So you (or a reviewer) can verify Mongo is connected, Redis pubsub is alive, jobs are processing, and Gemini is replying — without opening a UI. Every event is timestamped with a `[tag]` and ✓/→/ℹ/⚠/✗ symbol.
 
----
-
-## 🔭 What I'd Build Next
-
-Given more time, the natural extensions are:
-
-- 🔐 **Auth** (Clerk / NextAuth) so each teacher's data is scoped
-- 📤 **PDF upload preview** with page selection
-- 📊 **Per-paper analytics** (avg difficulty, time-to-generate trend)
-- 🌍 **Multi-language** generation (already half there — Gemini supports it)
-- 🧪 **Vitest + Playwright** suites
-- 🔔 **Email digest** when a paper finishes generating
-- 🧑‍🎓 **Student-facing view** of the paper with submission flow
 
 ---
 
