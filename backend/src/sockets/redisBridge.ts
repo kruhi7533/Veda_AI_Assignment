@@ -6,6 +6,10 @@ import { log } from '../utils/logger';
 import type { AssignmentEvent } from './index';
 
 export async function startWorkerEventSubscriber(): Promise<void> {
+  if (!env.REDIS_URL) {
+    log.warn('ws', 'REDIS_URL not set; skipping worker event subscriber');
+    return;
+  }
   const sub = new IORedis(env.REDIS_URL, {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
