@@ -6,6 +6,12 @@ export const GENERATION_QUEUE = 'assignment-generation';
 // BullMQ ships its own copy of ioredis; pass connection options (URL) rather
 // than a shared client to avoid type-incompatibility between the two copies.
 export function getBullConnection(): ConnectionOptions {
+  if (!env.REDIS_URL) {
+    throw new Error(
+      'REDIS_URL is not set. BullMQ requires a Redis instance. Set REDIS_URL ' +
+        'in your environment (e.g. an Upstash rediss:// URL).'
+    );
+  }
   // Parse the redis:// URL into host/port/password for portability across
   // ioredis versions used by BullMQ.
   const url = new URL(env.REDIS_URL);
@@ -18,6 +24,10 @@ export function getBullConnection(): ConnectionOptions {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
   };
+}
+
+export function isRedisConfigured(): boolean {
+  return !!env.REDIS_URL;
 }
 
 let _queue: Queue | null = null;

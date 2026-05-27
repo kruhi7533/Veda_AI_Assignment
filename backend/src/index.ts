@@ -61,10 +61,13 @@ async function main(): Promise<void> {
 
   const httpServer = http.createServer(app);
   initSocket(httpServer);
-  await startWorkerEventSubscriber();
 
-  httpServer.listen(env.PORT, () => {
-    log.ok('api', `listening on ${C.bold}http://localhost:${env.PORT}${C.reset}`);
+  // CRITICAL: bind the port FIRST so platform port-scans (Render, Fly, etc.)
+  // succeed even if Redis is temporarily unreachable. The pub/sub bridge is
+  // started in the background after listen.
+  // Use 0.0.0.0 so the process binds on all interfaces (required by Render).
+  httpServer.listen(env.PORT, '0.0.0.0', () => {
+    log.ok('api', `listening on ${C.bold}http://0.0.0.0:${env.PORT}${C.reset}`);
     log.info('api', `CORS origin allowed: ${env.CLIENT_ORIGIN}`);
     if (env.USE_MOCK_LLM) {
       log.warn(
@@ -77,6 +80,13 @@ async function main(): Promise<void> {
       `${C.gray}Open frontend: ${C.reset}${C.cyan}http://localhost:3000${C.reset}`,
       `${C.gray}Don't forget: run the worker in another terminal:${C.reset} ${C.bold}npm run worker${C.reset}`,
     ]);
+  });
+
+  // Start the Redis pub/sub subscriber non-blockingly. If Redis is down or
+  // mis-configured, log the error but keep the HTTP server running so the
+  // platform health check passes.
+  startWorkerEventSubscriber().catch((e) => {
+    log.warn('ws', `worker event subscriber unavailable: ${(e as Error).message}`);
   });
 }
 
