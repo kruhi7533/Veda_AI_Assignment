@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: vedaai-api
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: npm ci && npm run build -w backend
+    startCommand: npm run start:backend
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: USE_MOCK_LLM
+        value: "false"
+      - key: PDF_TMP_DIR
+        value: /tmp
+
+  - type: worker
+    name: vedaai-worker
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: npm ci && npm run build -w backend
+    startCommand: npm run worker
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: USE_MOCK_LLM
+        value: "false"
+      - key: PDF_TMP_DIR
+        value: /tmp

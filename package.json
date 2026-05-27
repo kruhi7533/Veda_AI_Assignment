@@ -1,0 +1,23 @@
+{
+  "name": "vedaai-assessment-creator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "VedaAI - AI Assessment Creator (Full-stack monorepo)",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "start:backend": "npm run start -w backend",
+    "worker": "npm run worker -w backend",
+    "clean:frontend": "rm -rf frontend/.next",
+    "clean": "rm -rf frontend/.next backend/dist"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
