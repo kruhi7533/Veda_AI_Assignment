@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #f4f4f4;
+  --color-card: #ffffff;
+}
+
+html, body {
+  background: var(--color-bg);
+  color: #0e0e0e;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+@layer components {
+  .veda-card {
+    @apply bg-white rounded-2xl shadow-card;
+  }
+  .veda-input {
+    @apply w-full bg-white rounded-xl border border-veda-border px-4 py-3
+           text-sm placeholder:text-veda-subtle outline-none transition
+           focus:border-veda-accent focus:ring-2 focus:ring-veda-accent/15;
+  }
+  .veda-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+           bg-veda-dark text-white text-sm font-medium
+           px-5 py-2.5 transition hover:opacity-90 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .veda-btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+           text-white text-sm font-medium px-5 py-2.5
+           bg-gradient-to-r from-veda-accent to-veda-accent2
+           shadow-glow transition hover:opacity-95 active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .veda-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+           bg-white border border-veda-border text-sm font-medium
+           px-5 py-2.5 text-veda-ink transition hover:bg-veda-muted;
+  }
+  .veda-chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+           text-[11px] font-medium border;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+
+/* Print styles for output page fallback */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+}
