@@ -182,6 +182,26 @@ brew services start redis
 
 Render free tier supports both HTTP and background-worker services and keeps the WebSocket connection open.
 
+#### Render setup
+
+- Import the root `render.yaml` blueprint.
+- Create two services from it:
+       - `vedaai-api` for the Express + Socket.IO server.
+       - `vedaai-worker` for the BullMQ background worker.
+- Set the secret env vars in Render:
+       - `CLIENT_ORIGIN` → your Vercel URL (for example `https://your-app.vercel.app`)
+       - `MONGODB_URI` → your MongoDB connection string
+       - `REDIS_URL` → your Redis / Upstash URL
+       - `GEMINI_API_KEY` → optional if you want real AI generation
+
+#### Vercel setup
+
+- Deploy the `frontend/` app to Vercel as the project root.
+- Set these environment variables in Vercel:
+       - `NEXT_PUBLIC_API_URL` → your Render API URL
+       - `NEXT_PUBLIC_SOCKET_URL` → your Render API URL
+- You can copy `frontend/.env.production.example` as a quick reference when filling values.
+
 ---
 
 ## Approach
