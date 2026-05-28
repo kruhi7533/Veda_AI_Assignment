@@ -20,4 +20,5 @@ export const env = {
   GEMINI_MODEL: process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
   USE_MOCK_LLM: process.env.USE_MOCK_LLM === 'true' || !process.env.GEMINI_API_KEY,
   PDF_TMP_DIR: process.env.PDF_TMP_DIR ?? './tmp',
+  RUN_WORKER_IN_API: process.env.RUN_WORKER_IN_API === 'true',
 };
